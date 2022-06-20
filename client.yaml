@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: client
+  name: client
+spec:
+  containers:
+  - image: docker.io/yauritux/busybox-curl
+    imagePullPolicy: IfNotPresent
+    name: client

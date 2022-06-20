@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hubble-metrics
+  namespace: kube-system
+  labels:
+    k8s-app: hubble
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9091"
+spec:
+  clusterIP: None
+  type: ClusterIP
+  ports:
+  - name: hubble-metrics
+    port: 9091
+    protocol: TCP
+    targetPort: hubble-metrics
+  selector:
+    k8s-app: cilium
+

@@ -1,0 +1,16 @@
+
+      annotations:
+        prometheus.io/port: "9090"
+        prometheus.io/scrape: "true"
+
+
+        ports:
+        - name: prometheus
+          containerPort: 9090
+          hostPort: 9090
+          protocol: TCP
+        - name: hubble-metrics
+          containerPort: 9091
+          hostPort: 9091
+          protocol: TCP
+
