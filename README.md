@@ -19,18 +19,8 @@ cilium connectivity test
 cilium hubble ui
 ```
 
-To setup IAM OIDC (necessary to install ingress controller)
-https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html
-Then:
-https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html
-(To get identity: `aws sts get-caller-identity`)
 
-https://www.eksworkshop.com/beginner/130_exposing-service/ingress_controller_alb/
-
-```bash
-```
-
-Setup Hubble metrics & monitoring
+## Setup Hubble metrics & monitoring
 
 ```bash
 # METRICS
@@ -41,7 +31,7 @@ kubectl patch -n kube-system daemonset.apps/cilium --type='json' -p='[{"op": "ad
 
 cilium config set prometheus-serve-addr ":9090"
 cilium config set hubble-metrics-server ":9091"
-cilium config set hubble-metrics "flow http:destinationContext=pod-short|dns|ip;sourceContext=pod-short|dns|ip flow tcp icmp drop:destinationContext=pod;sourceContext=pod dns:query;ignoreAAAA"
+cilium config set hubble-metrics "flow http:destinationContext=pod-short|dns|ip;sourceContext=pod-short|dns|ip flow tcp icmp drop:destinationContext=pod-short|dns|ip;sourceContext=pod-short|dns|ip dns:query;ignoreAAAA"
 k apply -f ./hubble-metrics-service.yaml
 
 # For DNS / L7: annotate pods with:
@@ -54,7 +44,7 @@ kubectl -n cilium-monitoring port-forward service/grafana --address 0.0.0.0 --ad
 xdg-open http://localhost:3000/
 ```
 
-In Prometheus:
+### In Prometheus:
 ```
 1000 * sum(rate(hubble_http_request_duration_seconds_sum[1m])) by (source,destination) / sum(rate(hubble_http_request_duration_seconds_count[1m])) by (source,destination)
 
@@ -102,15 +92,28 @@ eksctl create iamserviceaccount \
   --namespace=kube-system \
   --name=aws-load-balancer-controller \
   --attach-policy-arn=arn:aws:iam::xxxxxxxxxxx:policy/ELB-IAMPolicy-jtakvori-temporary \
+  --role-name "AmazonEKSLoadBalancerControllerRole" \
   --approve
-      --role-name "AmazonEKSLoadBalancerControllerRole" \
+
+helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
+  -n kube-system \
+  --set clusterName=${NAME} \
+  --set serviceAccount.create=false \
+  --set serviceAccount.name=aws-load-balancer-controller 
+
+# From mesh-arena directory
+kubectl apply -f alb-ingress.yaml -n mesh-arena
+# Get URL from:
+kubectl get ingress -n mesh-arena
 ```
 
 ## Destroy
 
 ```bash
+cilium uninstall
+kubectl delete namespace mesh-arena
 eksctl delete cluster -f ./eks-config.yaml
-aws iam delete-policy --policy-name ELB-IAMPolicy-jtakvori-temporary
+aws iam delete-policy --policy-arn arn:aws:iam::xxxxxxx:policy/ELB-IAMPolicy-jtakvori-temporary
 ```
 
 ## First init eks-config
