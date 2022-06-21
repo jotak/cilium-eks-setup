@@ -17,8 +17,6 @@ cilium status --wait
 cilium connectivity test
 
 cilium hubble ui
-
-kubectl apply -f https://raw.githubusercontent.com/cilium/cilium/v1.11/examples/kubernetes/addons/prometheus/monitoring-example.yaml
 ```
 
 To setup IAM OIDC (necessary to install ingress controller)
@@ -30,20 +28,14 @@ https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.ht
 https://www.eksworkshop.com/beginner/130_exposing-service/ingress_controller_alb/
 
 ```bash
-    eksctl create iamserviceaccount \
-      --cluster=${NAME}\
-      --region=eu-west-1\
-      --namespace=kube-system \
-      --name=aws-load-balancer-controller \
-      --role-name "AmazonEKSLoadBalancerControllerRole" \
-      --attach-policy-arn=arn:aws:iam::xxxxxxxxxxx:policy/AWSLoadBalancerControllerIAMPolicy \
-      --approve
 ```
 
 Setup Hubble metrics & monitoring
 
 ```bash
 # METRICS
+kubectl apply -f https://raw.githubusercontent.com/cilium/cilium/v1.11/examples/kubernetes/addons/prometheus/monitoring-example.yaml
+
 kubectl patch -n kube-system daemonset.apps/cilium --type='json' -p='[{"op": "add", "path": "/spec/template/metadata/annotations", "value":{"prometheus.io/port": "9090","prometheus.io/scrape": "true"}}]'
 kubectl patch -n kube-system daemonset.apps/cilium --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/ports", "value":[{"name":"prometheus","containerPort":9090,"hostPort":9090,"protocol":"TCP"},{"name":"hubble-metrics","containerPort":9091,"hostPort":9091,"protocol":"TCP"}]}]'
 
@@ -85,10 +77,40 @@ Add `mapUsers`, e.g:
         - system:masters
 ```
 
+Then, from the other machine:
+
+```bash
+aws eks update-kubeconfig --region eu-west-1 --name jtakvori-test-cilium-X
+kubectl config set-context arn:aws:eks:eu-west-1:xxxxxx:cluster/jtakvori-test-cilium-X
+```
+
+## Deploy mesh-arena
+
+```bash
+kubectl create namespace mesh-arena && kubectl apply -f <(curl -L https://raw.githubusercontent.com/jotak/demo-mesh-arena/zizou/quickstart-naked.yml) -n mesh-arena
+```
+
+## Setup Ingress
+
+```bash
+eksctl utils associate-iam-oidc-provider --cluster=${NAME} --region=eu-west-1 --approve
+aws iam create-policy --policy-name ELB-IAMPolicy-jtakvori-temporary --policy-document file://iam_policy.json
+
+eksctl create iamserviceaccount \
+  --cluster=${NAME}\
+  --region=eu-west-1\
+  --namespace=kube-system \
+  --name=aws-load-balancer-controller \
+  --attach-policy-arn=arn:aws:iam::xxxxxxxxxxx:policy/ELB-IAMPolicy-jtakvori-temporary \
+  --approve
+      --role-name "AmazonEKSLoadBalancerControllerRole" \
+```
+
 ## Destroy
 
 ```bash
 eksctl delete cluster -f ./eks-config.yaml
+aws iam delete-policy --policy-name ELB-IAMPolicy-jtakvori-temporary
 ```
 
 ## First init eks-config
