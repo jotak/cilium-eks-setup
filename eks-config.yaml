@@ -2,7 +2,7 @@ apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
 metadata:
-  name: jtakvori-test-cilium-4
+  name: jtakvori-test-cilium-5
   region: eu-west-1
 
 managedNodeGroups:

@@ -5,7 +5,7 @@
 ## Start
 
 ```bash
-export NAME=jtakvori-test-cilium-4
+export NAME=jtakvori-test-cilium-5
 sed -i "s/name: jtak.*$/name: ${NAME}/" eks-config.yaml
 
 eksctl create cluster -f ./eks-config.yaml --timeout 40m
@@ -67,6 +67,22 @@ In Prometheus:
 1000 * sum(rate(hubble_http_request_duration_seconds_sum[1m])) by (source,destination) / sum(rate(hubble_http_request_duration_seconds_count[1m])) by (source,destination)
 
 1000 * histogram_quantile(0.9, sum(rate(hubble_http_request_duration_seconds_bucket[1m])) by (le,source,destination))
+```
+
+## Grant EKS access
+
+```bash
+kubectl -n kube-system edit configmap aws-auth
+```
+
+Add `mapUsers`, e.g:
+
+```yaml
+  mapUsers: |
+    - userarn: arn:aws:iam::xxxxxx:user/skhoury
+      username: skhoury
+      groups:
+        - system:masters
 ```
 
 ## Destroy
